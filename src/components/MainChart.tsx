@@ -9,6 +9,7 @@ import type {
   TradeLabel,
 } from '../types';
 import { indicatorColor } from '../utils/indicatorColors';
+import { snapTimestampToTick } from '../utils/timestamp';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -219,6 +220,7 @@ export interface MainChartProps {
 
 function MainChartInner({ height, className, externalHover = false }: MainChartProps) {
   const [dragMode, setDragMode] = useState<'zoom' | 'pan'>('zoom');
+  const isFullscreen = externalHover;
 
   const mode = useStore((s) => s.mode);
   const algoData = useStore((s) => s.algoData);
@@ -279,8 +281,9 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
     return [lo, hi] as [number, number];
   }, [filteredOB, tradesQtyFiltered]);
 
-  const visibleXMin = xRange?.[0] ?? xExtent?.[0] ?? 0;
-  const visibleXMax = xRange?.[1] ?? xExtent?.[1] ?? 1;
+  const effectiveXRange = isFullscreen ? null : xRange;
+  const visibleXMin = effectiveXRange?.[0] ?? xExtent?.[0] ?? 0;
+  const visibleXMax = effectiveXRange?.[1] ?? xExtent?.[1] ?? 1;
 
   const obMarkerSize = useMemo(() => {
     if (!xExtent) return 4;
@@ -585,7 +588,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
         gridcolor: GRID, zerolinecolor: GRID,
         exponentformat: 'none' as const,
         separatethousands: true,
-        ...(xRange ? { range: [xRange[0], xRange[1]] as [number, number] } : {}),
+        ...(effectiveXRange ? { range: [effectiveXRange[0], effectiveXRange[1]] as [number, number] } : { autorange: true }),
       },
       yaxis: {
         title: { text: yAxisTitle },
@@ -593,13 +596,13 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
         fixedrange: true,
         exponentformat: 'none' as const,
         separatethousands: true,
-        ...(yRange ? { range: yRange, autorange: false } : { autorange: true }),
+        ...(isFullscreen ? { autorange: true } : (yRange ? { range: yRange, autorange: false } : { autorange: true })),
         ...(yGridDtick ? { dtick: yGridDtick } : {}),
       },
       shapes,
       hovermode: 'closest',
     };
-  }, [hoverTimestamp, xRange, yAxisTitle, obHistogramData.shapes, yRange, yGridDtick, dragMode]);
+  }, [hoverTimestamp, effectiveXRange, yAxisTitle, obHistogramData.shapes, yRange, yGridDtick, dragMode, isFullscreen]);
 
   const onRelayout = useCallback(
     (event: Readonly<PlotRelayoutEvent>) => {
@@ -607,17 +610,19 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
       const dm = ev['dragmode'];
       if (dm === 'pan' || dm === 'zoom') setDragMode(dm);
 
-      const r0 = ev['xaxis.range[0]'];
-      const r1 = ev['xaxis.range[1]'];
-      if (typeof r0 === 'number' && typeof r1 === 'number' && Number.isFinite(r0) && Number.isFinite(r1)) {
-        setXRange([r0, r1]);
-        return;
-      }
-      if (ev['xaxis.autorange'] === true) {
-        setXRange(null);
+      if (!isFullscreen) {
+        const r0 = ev['xaxis.range[0]'];
+        const r1 = ev['xaxis.range[1]'];
+        if (typeof r0 === 'number' && typeof r1 === 'number' && Number.isFinite(r0) && Number.isFinite(r1)) {
+          setXRange([r0, r1]);
+          return;
+        }
+        if (ev['xaxis.autorange'] === true) {
+          setXRange(null);
+        }
       }
     },
-    [setXRange, setDragMode],
+    [setXRange, setDragMode, isFullscreen],
   );
 
   const onHover = useCallback(
@@ -633,37 +638,38 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
   }, [setChartHoverDetail, externalHover]);
 
   const onCursorX = useCallback((x: number | null) => {
-    if (useStore.getState().hoverTimestamp === x) return;
-    setHoverTimestamp(x);
+    const snapped = x == null ? null : snapTimestampToTick(x);
+    if (useStore.getState().hoverTimestamp === snapped) return;
+    setHoverTimestamp(snapped);
   }, [setHoverTimestamp]);
 
   const onPan = useCallback(
     (deltaX: number) => {
-      const lo = xRange?.[0] ?? xExtent?.[0] ?? 0;
-      const hi = xRange?.[1] ?? xExtent?.[1] ?? 1;
+      const lo = effectiveXRange?.[0] ?? xExtent?.[0] ?? 0;
+      const hi = effectiveXRange?.[1] ?? xExtent?.[1] ?? 1;
       const width = hi - lo;
       const shift = deltaX * width * 0.001;
-      setXRange([lo + shift, hi + shift]);
+      if (!isFullscreen) setXRange([lo + shift, hi + shift]);
     },
-    [xRange, xExtent, setXRange],
+    [effectiveXRange, xExtent, setXRange, isFullscreen],
   );
 
   const onScrollZoom = useCallback(
     (deltaY: number) => {
-      const lo = xRange?.[0] ?? xExtent?.[0] ?? 0;
-      const hi = xRange?.[1] ?? xExtent?.[1] ?? 1;
+      const lo = effectiveXRange?.[0] ?? xExtent?.[0] ?? 0;
+      const hi = effectiveXRange?.[1] ?? xExtent?.[1] ?? 1;
       const width = hi - lo;
       if (dragMode === 'pan') {
         const shift = -deltaY * width * 0.001;
-        setXRange([lo + shift, hi + shift]);
+        if (!isFullscreen) setXRange([lo + shift, hi + shift]);
         return;
       }
       const center = (lo + hi) / 2;
       const factor = deltaY > 0 ? 1.08 : 0.92;
       const newWidth = width * factor;
-      setXRange([center - newWidth / 2, center + newWidth / 2]);
+      if (!isFullscreen) setXRange([center - newWidth / 2, center + newWidth / 2]);
     },
-    [xRange, xExtent, setXRange, dragMode],
+    [effectiveXRange, xExtent, setXRange, dragMode, isFullscreen],
   );
 
   const config = useMemo(() => ({

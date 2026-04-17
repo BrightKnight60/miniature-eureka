@@ -4,6 +4,7 @@ import type { Data, PlotHoverEvent, PlotRelayoutEvent } from 'plotly.js';
 import { useStore } from '../store';
 import ChartPanel from './ChartPanel';
 import { extractProductPnlSeries } from '../parsers/productPnlSeries';
+import { snapTimestampToTick } from '../utils/timestamp';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -126,7 +127,7 @@ export default function PnLPanel() {
   const onHover = useCallback((event: Readonly<PlotHoverEvent>) => {
     const pt = event.points[0];
     if (pt && typeof pt.x === 'number') {
-      setHoverTimestamp(pt.x);
+      setHoverTimestamp(snapTimestampToTick(pt.x));
     }
   }, [setHoverTimestamp]);
 

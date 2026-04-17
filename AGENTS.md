@@ -67,8 +67,9 @@ Indicator CSVs and trade label CSVs are loaded separately and **merged** into th
 | `src/components/TradeFilters.tsx` | Dynamic label toggle grid + quantity filter |
 | `src/components/DownsampleControls.tsx` | Threshold inputs for ds10, ds100, ob, trades |
 | `src/utils/indicatorColors.ts` | Shared deterministic indicator color mapping used by both chart traces and indicator list labels |
+| `src/utils/timestamp.ts` | Shared simulation tick snapping helpers (`SIM_TICK_SIZE=100`) used by chart hover/cursor sync |
 | `src/utils/downsample.ts` | Viewport-aware downsampling logic |
-| `electron/main.js` | Electron entry point; production loads `dist/index.html` when `app.isPackaged` (avoids treating unset `NODE_ENV` as dev and loading localhost) |
+| `electron/main.js` | Electron entry point; production loads `dist/index.html`, prefers GPU acceleration by default (with Chromium GPU switches), and supports explicit software fallback via `--pv-disable-gpu` / `PV_DISABLE_GPU=1` |
 | `vite.config.ts` | Uses `base: './'` so built assets resolve correctly on both custom domains and project pages |
 | `.github/workflows/prosperity-visualizer-pages.yml` (repo root) | Builds from `prosperity-visualizer/` and deploys `dist/` to GitHub Pages on pushes to `main` |
 | `prosperity-visualizer/.github/workflows/pages.yml` | Standalone Pages workflow for subtree-split repo that builds at repo root, validates no `/src/main.tsx` in `dist/index.html`, and deploys `dist/` |
@@ -117,6 +118,8 @@ Parsing must treat each tick’s string as potentially malformed (see Known gotc
 - Indicator visibility is controlled with per-indicator toggles in Zustand (`indicatorVisibility`) so users can hide/show overlays without deleting uploaded series.
 - Indicator trace and sidebar swatch colors share one deterministic color function (`indicatorColors.ts`) to avoid mismatched legend/line interpretation.
 - Indicator overlays are downsampled with `ds100` threshold in `MainChart` to keep pan/zoom interactions responsive on dense runs.
+- Hover/cursor synchronization snaps timestamps to simulation ticks (`100`) across main chart, PnL panel, and position panel for consistent cross-panel readout.
+- Main chart bounds behave differently by mode: home view keeps enforced user bounds (`xRange`) while fullscreen uses dynamic autorange; exiting fullscreen restores home bounds behavior.
 - **Order book as scatter plot** because Prosperity markets have **at most three** bid/ask levels per side.
 - **Notebook-export pattern** for indicators and trade labels: compute in Python, export CSV, load into the visualizer.
 - **X-axis zoom** synced across the main chart, PnL panel, and position panel via **Plotly `relayout`** (or equivalent) events.

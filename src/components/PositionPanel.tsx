@@ -3,6 +3,7 @@ import Plot from '../PlotlyChart';
 import type { PlotHoverEvent, PlotRelayoutEvent } from 'plotly.js';
 import { useStore } from '../store';
 import ChartPanel from './ChartPanel';
+import { snapTimestampToTick } from '../utils/timestamp';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -96,7 +97,7 @@ export default function PositionPanel() {
 
   const onHover = useCallback((event: Readonly<PlotHoverEvent>) => {
     const pt = event.points[0];
-    if (pt && typeof pt.x === 'number') setHoverTimestamp(pt.x);
+    if (pt && typeof pt.x === 'number') setHoverTimestamp(snapTimestampToTick(pt.x));
   }, [setHoverTimestamp]);
 
   const onUnhover = useCallback(() => { setHoverTimestamp(null); }, [setHoverTimestamp]);
