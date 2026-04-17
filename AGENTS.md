@@ -15,6 +15,7 @@ A custom **desktop visualizer** (Electron + React + Vite + Plotly.js) for the **
 ## Architecture
 
 - **Electron** wraps a **React + Vite** app for macOS desktop packaging.
+- **Vite web build** is also configured for **GitHub Pages** deployment (repo-name base path is set automatically in CI).
 - **Plotly.js** `scattergl` for WebGL-accelerated rendering of order book scatter plots and trade markers.
 - **Zustand** for global state management.
 - **Tailwind CSS** for minimal, functional styling.
@@ -66,7 +67,10 @@ Indicator CSVs and trade label CSVs are loaded separately and **merged** into th
 | `src/components/TradeFilters.tsx` | Dynamic label toggle grid + quantity filter |
 | `src/components/DownsampleControls.tsx` | Threshold inputs for ds10, ds100, ob, trades |
 | `src/utils/downsample.ts` | Viewport-aware downsampling logic |
-| `electron/main.js` | Electron entry point |
+| `electron/main.js` | Electron entry point; production loads `dist/index.html` when `app.isPackaged` (avoids treating unset `NODE_ENV` as dev and loading localhost) |
+| `vite.config.ts` | Uses `base: '/'` locally for web hosting and repo-scoped base path in GitHub Actions for Pages |
+| `.github/workflows/prosperity-visualizer-pages.yml` (repo root) | Builds from `prosperity-visualizer/` and deploys `dist/` to GitHub Pages on pushes to `main` |
+| `prosperity-visualizer/.github/workflows/pages.yml` | Standalone Pages workflow for subtree-split repo that builds at repo root and deploys `dist/` |
 
 ---
 
