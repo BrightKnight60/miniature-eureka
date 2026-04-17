@@ -9,6 +9,7 @@ import TradeFilters from './components/TradeFilters';
 import DownsampleControls from './components/DownsampleControls';
 import ChartPanel from './components/ChartPanel';
 import type { LogEntry } from './types';
+import { snapTimestampToTick } from './utils/timestamp';
 
 function findActiveLogIndex(logs: LogEntry[], hoverTimestamp: number | null): number {
   if (hoverTimestamp === null || logs.length === 0) return -1;
@@ -45,6 +46,7 @@ export default function App() {
     [activeLogEntry, selectedProduct],
   );
   const activePosition = selectedProduct && activeLogEntry ? activeLogEntry.position[selectedProduct] : undefined;
+  const hoverTimestampDisplay = hoverTimestamp == null ? null : snapTimestampToTick(hoverTimestamp);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F5F5F7]">
@@ -56,7 +58,7 @@ export default function App() {
               Prosperity Visualizer
             </span>
             <span className={`rounded-md bg-[#F5F5F7] px-2.5 py-0.5 font-mono text-sm font-medium tabular-nums text-[#007AFF] ${hoverTimestamp === null ? 'invisible' : ''}`}>
-              {hoverTimestamp ?? 0}
+              {hoverTimestampDisplay ?? 0}
             </span>
           </div>
         )}

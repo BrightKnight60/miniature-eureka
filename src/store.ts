@@ -7,6 +7,7 @@ import type {
   TradeLabel,
   DownsampleThresholds,
 } from './types';
+import { snapTimestampToTick } from './utils/timestamp';
 
 interface AppState {
   mode: AppMode;
@@ -90,7 +91,8 @@ export const useStore = create<AppState>((set) => ({
   setSelectedDay: (selectedDay) => set({ selectedDay }),
 
   hoverTimestamp: null,
-  setHoverTimestamp: (hoverTimestamp) => set({ hoverTimestamp }),
+  setHoverTimestamp: (hoverTimestamp) =>
+    set({ hoverTimestamp: hoverTimestamp == null ? null : snapTimestampToTick(hoverTimestamp) }),
 
   chartHoverDetail: null,
   setChartHoverDetail: (chartHoverDetail) => set({ chartHoverDetail }),
