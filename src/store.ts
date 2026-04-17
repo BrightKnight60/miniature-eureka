@@ -47,8 +47,10 @@ interface AppState {
   setNormalizationIndicator: (name: string | null) => void;
 
   indicators: IndicatorSeries[];
+  indicatorVisibility: Record<string, boolean>;
   addIndicator: (indicator: IndicatorSeries) => void;
   removeIndicator: (name: string) => void;
+  setIndicatorVisible: (name: string, visible: boolean) => void;
 
   tradeLabels: TradeLabel[];
   setTradeLabels: (labels: TradeLabel[]) => void;
@@ -114,9 +116,18 @@ export const useStore = create<AppState>((set) => ({
 
   indicators: [],
   addIndicator: (indicator) =>
-    set((s) => ({ indicators: [...s.indicators.filter((i) => i.name !== indicator.name), indicator] })),
+    set((s) => ({
+      indicators: [...s.indicators.filter((i) => i.name !== indicator.name), indicator],
+      indicatorVisibility: { ...s.indicatorVisibility, [indicator.name]: s.indicatorVisibility[indicator.name] ?? true },
+    })),
   removeIndicator: (name) =>
-    set((s) => ({ indicators: s.indicators.filter((i) => i.name !== name) })),
+    set((s) => {
+      const { [name]: _removed, ...rest } = s.indicatorVisibility;
+      return { indicators: s.indicators.filter((i) => i.name !== name), indicatorVisibility: rest };
+    }),
+  indicatorVisibility: {},
+  setIndicatorVisible: (name, visible) =>
+    set((s) => ({ indicatorVisibility: { ...s.indicatorVisibility, [name]: visible } })),
 
   tradeLabels: [],
   setTradeLabels: (tradeLabels) => set({ tradeLabels }),

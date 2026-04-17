@@ -5,6 +5,7 @@ import { parseAlgoLog, mergeAlgoLogs } from '../parsers/parseLog';
 import { parseHistoricalFiles, inferSimulationDayFromFilename, type HistoricalTradeFile } from '../parsers/parseCsv';
 import { parseIndicatorCsv } from '../parsers/parseIndicators';
 import { parseTradeLabels } from '../parsers/parseTradeLabels';
+import { indicatorColor } from '../utils/indicatorColors';
 
 function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -13,13 +14,6 @@ function readFileAsText(file: File): Promise<string> {
     r.onerror = () => reject(r.error);
     r.readAsText(file);
   });
-}
-
-const INDICATOR_HUES = [210, 30, 280, 160, 340, 50, 200, 120];
-
-function indicatorColor(_name: string, index: number): string {
-  const hue = INDICATOR_HUES[index % INDICATOR_HUES.length];
-  return `hsl(${hue} 65% 50%)`;
 }
 
 const OB_KEYS = [
@@ -158,6 +152,8 @@ export default function Controls() {
   const indicators = useStore((s) => s.indicators);
   const addIndicator = useStore((s) => s.addIndicator);
   const removeIndicator = useStore((s) => s.removeIndicator);
+  const indicatorVisibility = useStore((s) => s.indicatorVisibility);
+  const setIndicatorVisible = useStore((s) => s.setIndicatorVisible);
   const setTradeLabels = useStore((s) => s.setTradeLabels);
   const setLabelToggle = useStore((s) => s.setLabelToggle);
 
@@ -362,19 +358,30 @@ export default function Controls() {
           <p className="text-[11px] text-[#AEAEB2]">None loaded</p>
         ) : (
           <ul className="max-h-32 space-y-1 overflow-y-auto">
-            {indicators.map((ind: IndicatorSeries, idx: number) => (
+            {indicators.map((ind: IndicatorSeries) => (
               <li key={`${ind.name}-${ind.product}-${ind.day}`}
                 className="flex items-center justify-between rounded-lg bg-[#F5F5F7] px-2.5 py-1.5">
                 <span className="flex min-w-0 items-center gap-2">
                   <span className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: indicatorColor(ind.name, idx) }} />
+                    style={{ backgroundColor: indicatorColor(ind.name) }} />
                   <span className="truncate text-[11px] font-medium text-[#1D1D1F]">{ind.name}</span>
                 </span>
-                <button type="button"
-                  className="shrink-0 px-1 text-[#AEAEB2] transition-colors hover:text-[#FF3B30]"
-                  onClick={() => removeIndicator(ind.name)}>
-                  ×
-                </button>
+                <span className="flex shrink-0 items-center gap-1.5">
+                  <label className="flex cursor-pointer items-center gap-1 text-[10px] text-[#6E6E73]">
+                    <input
+                      type="checkbox"
+                      checked={indicatorVisibility[ind.name] ?? true}
+                      onChange={(e) => setIndicatorVisible(ind.name, e.target.checked)}
+                      className="h-3 w-3 rounded accent-[#007AFF]"
+                    />
+                    Show
+                  </label>
+                  <button type="button"
+                    className="shrink-0 px-1 text-[#AEAEB2] transition-colors hover:text-[#FF3B30]"
+                    onClick={() => removeIndicator(ind.name)}>
+                    ×
+                  </button>
+                </span>
               </li>
             ))}
           </ul>

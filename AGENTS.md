@@ -66,6 +66,7 @@ Indicator CSVs and trade label CSVs are loaded separately and **merged** into th
 | `src/components/Controls.tsx` | File picker, product/day selector, normalization, OB toggles |
 | `src/components/TradeFilters.tsx` | Dynamic label toggle grid + quantity filter |
 | `src/components/DownsampleControls.tsx` | Threshold inputs for ds10, ds100, ob, trades |
+| `src/utils/indicatorColors.ts` | Shared deterministic indicator color mapping used by both chart traces and indicator list labels |
 | `src/utils/downsample.ts` | Viewport-aware downsampling logic |
 | `electron/main.js` | Electron entry point; production loads `dist/index.html` when `app.isPackaged` (avoids treating unset `NODE_ENV` as dev and loading localhost) |
 | `vite.config.ts` | Uses `base: './'` so built assets resolve correctly on both custom domains and project pages |
@@ -113,6 +114,9 @@ Parsing must treat each tick’s string as potentially malformed (see Known gotc
 ## Design decisions
 
 - **Single `scattergl` trace** for trades with **per-point** `color`, `symbol`, and `size` arrays — **not** one trace per label — to avoid **O(N traces)** hover performance degradation.
+- Indicator visibility is controlled with per-indicator toggles in Zustand (`indicatorVisibility`) so users can hide/show overlays without deleting uploaded series.
+- Indicator trace and sidebar swatch colors share one deterministic color function (`indicatorColors.ts`) to avoid mismatched legend/line interpretation.
+- Indicator overlays are downsampled with `ds100` threshold in `MainChart` to keep pan/zoom interactions responsive on dense runs.
 - **Order book as scatter plot** because Prosperity markets have **at most three** bid/ask levels per side.
 - **Notebook-export pattern** for indicators and trade labels: compute in Python, export CSV, load into the visualizer.
 - **X-axis zoom** synced across the main chart, PnL panel, and position panel via **Plotly `relayout`** (or equivalent) events.

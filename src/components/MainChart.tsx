@@ -8,6 +8,7 @@ import type {
   Trade,
   TradeLabel,
 } from '../types';
+import { indicatorColor } from '../utils/indicatorColors';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -18,11 +19,6 @@ const BID_COLOR_ALPHA = 'rgba(0,122,255,0.35)';
 const ASK_COLOR = '#FF3B30';
 const ASK_COLOR_ALPHA = 'rgba(255,59,48,0.35)';
 const DEFAULT_TRADE_GRAY = '#AEAEB2';
-
-const INDICATOR_COLORS = [
-  '#FF9500', '#34C759', '#AF52DE', '#5AC8FA',
-  '#FF2D55', '#5856D6', '#30B0C7', '#FF6482',
-];
 
 function tradeKey(timestamp: number, price: number, quantity: number): string {
   return `${timestamp}|${price}|${quantity}`;
@@ -234,6 +230,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
   const obLevelToggles = useStore((s) => s.obLevelToggles);
   const normalizationIndicator = useStore((s) => s.normalizationIndicator);
   const indicators = useStore((s) => s.indicators);
+  const indicatorVisibility = useStore((s) => s.indicatorVisibility);
   const tradeLabels = useStore((s) => s.tradeLabels);
   const labelToggles = useStore((s) => s.labelToggles);
   const quantityFilter = useStore((s) => s.quantityFilter);
@@ -497,25 +494,28 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
       if (ind.product !== selectedProduct) return false;
       if (selectedDay === 'all') return true;
       return ind.day === selectedDay;
-    });
-    return list.map((ind, i) => {
+    }).filter((ind) => indicatorVisibility[ind.name] ?? true);
+    return list.map((ind) => {
       const pts = getSeriesPoints(ind);
-      const xs = pts.map((p) => p.timestamp);
-      let ys = pts.map((p) => p.value);
+      const step = downsampleStep(pts.length, downsampleThresholds.ds100);
+      const indices = thinIndices(pts.length, step);
+      const sampled = indices.map((ix) => pts[ix]);
+      const xs = sampled.map((p) => p.timestamp);
+      let ys = sampled.map((p) => p.value);
       if (normName) {
         const normSeries = findNormalizationSeries(indicators, normName, selectedProduct, selectedDay);
-        ys = pts.map((p) => p.value - indicatorValueAt(normSeries, p.timestamp));
+        ys = sampled.map((p) => p.value - indicatorValueAt(normSeries, p.timestamp));
       }
       return {
         type: 'scattergl', mode: 'lines',
         x: xs, y: ys,
-        line: { width: 1.5, color: INDICATOR_COLORS[i % INDICATOR_COLORS.length] },
+        line: { width: 1.5, color: indicatorColor(ind.name) },
         hovertemplate: `${ind.name}: %{y:.2f}<extra></extra>`,
         ...(externalHover ? { hoverinfo: 'none' as const } : {}),
         name: ind.name,
       } as Data;
     });
-  }, [indicators, selectedProduct, selectedDay, normName, externalHover]);
+  }, [indicators, selectedProduct, selectedDay, normName, externalHover, indicatorVisibility, downsampleThresholds.ds100]);
 
   const data = useMemo(() => {
     const traces: Data[] = [];
