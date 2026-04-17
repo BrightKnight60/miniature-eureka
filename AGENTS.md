@@ -68,9 +68,9 @@ Indicator CSVs and trade label CSVs are loaded separately and **merged** into th
 | `src/components/DownsampleControls.tsx` | Threshold inputs for ds10, ds100, ob, trades |
 | `src/utils/downsample.ts` | Viewport-aware downsampling logic |
 | `electron/main.js` | Electron entry point; production loads `dist/index.html` when `app.isPackaged` (avoids treating unset `NODE_ENV` as dev and loading localhost) |
-| `vite.config.ts` | Uses `base: '/'` locally for web hosting and repo-scoped base path in GitHub Actions for Pages |
+| `vite.config.ts` | Uses `VITE_BASE_PATH` override when provided; otherwise `/` locally and repo-scoped base path in GitHub Actions |
 | `.github/workflows/prosperity-visualizer-pages.yml` (repo root) | Builds from `prosperity-visualizer/` and deploys `dist/` to GitHub Pages on pushes to `main` |
-| `prosperity-visualizer/.github/workflows/pages.yml` | Standalone Pages workflow for subtree-split repo that builds at repo root and deploys `dist/` |
+| `prosperity-visualizer/.github/workflows/pages.yml` | Standalone Pages workflow for subtree-split repo; sets `VITE_BASE_PATH=/` for custom-domain deploys and validates no `/src/main.tsx` in `dist/index.html` |
 
 ---
 

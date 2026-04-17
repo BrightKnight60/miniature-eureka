@@ -31,7 +31,17 @@ jobs:
         run: npm ci
 
       - name: Build
+        env:
+          # Custom domain is served from root, not /<repo-name>/.
+          VITE_BASE_PATH: /
         run: npm run build
+
+      - name: Validate built entrypoint
+        run: |
+          if rg "/src/main.tsx" dist/index.html; then
+            echo "Build output still references source entrypoint."
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
