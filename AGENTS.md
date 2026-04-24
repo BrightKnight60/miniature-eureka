@@ -69,7 +69,9 @@ Indicator CSVs and trade label CSVs are loaded separately and **merged** into th
 | `src/utils/indicatorColors.ts` | Shared deterministic indicator color mapping used by both chart traces and indicator list labels |
 | `src/utils/timestamp.ts` | Shared simulation tick snapping helpers (`SIM_TICK_SIZE=100`) used by chart hover/cursor sync |
 | `src/utils/downsample.ts` | Viewport-aware downsampling logic |
-| `electron/main.js` | Electron entry point; production loads `dist/index.html`, prefers GPU acceleration by default (with Chromium GPU switches), and supports explicit software fallback via `--pv-disable-gpu` / `PV_DISABLE_GPU=1` |
+| `electron/main.js` | Electron entry point; production loads `dist/index.html`, emits diagnostic startup/load/GPU logs with `--pv-diagnostics` / `PV_DIAGNOSTICS=1`, and performs one-time GPU crash relaunch with `--pv-disable-gpu` fallback |
+| `electron/verify-dist.cjs` | Pre-packaging sanity check for `dist/index.html` and referenced bundled JS/CSS assets |
+| `electron/run-packaged-diagnostic.cjs` | Launches packaged mac app binary with diagnostics enabled for white-screen investigation |
 | `vite.config.ts` | Uses `base: './'` so built assets resolve correctly on both custom domains and project pages |
 | `.github/workflows/prosperity-visualizer-pages.yml` (repo root) | Builds from `prosperity-visualizer/` and deploys `dist/` to GitHub Pages on pushes to `main` |
 | `prosperity-visualizer/.github/workflows/pages.yml` | Standalone Pages workflow for subtree-split repo that builds at repo root, validates no `/src/main.tsx` in `dist/index.html`, and deploys `dist/` |
@@ -120,6 +122,8 @@ Parsing must treat each tick’s string as potentially malformed (see Known gotc
 - Indicator overlays are downsampled with `ds100` threshold in `MainChart` to keep pan/zoom interactions responsive on dense runs.
 - Hover/cursor synchronization snaps timestamps to simulation ticks (`100`) across main chart, PnL panel, and position panel for consistent cross-panel readout.
 - Main chart bounds behave differently by mode: home view keeps enforced user bounds (`xRange`) while fullscreen uses dynamic autorange; exiting fullscreen restores home bounds behavior.
+- Desktop packaging uses `verify:dist` before electron-builder so stale/missing frontend assets fail fast.
+- Unsigned team builds may trigger Gatekeeper \"damaged/corrupted\" messaging; docs include right-click/Open, Privacy & Security `Open Anyway`, and quarantine-removal guidance for trusted local artifacts.
 - **Order book as scatter plot** because Prosperity markets have **at most three** bid/ask levels per side.
 - **Notebook-export pattern** for indicators and trade labels: compute in Python, export CSV, load into the visualizer.
 - **X-axis zoom** synced across the main chart, PnL panel, and position panel via **Plotly `relayout`** (or equivalent) events.

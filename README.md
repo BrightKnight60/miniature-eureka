@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# Prosperity Visualizer
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Desktop + web visualizer for IMC Prosperity data (Electron + React + Vite + Plotly).
 
-Currently, two official plugins are available:
+## Development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Install deps: `npm install`
+- Web dev mode: `npm run dev`
+- Electron dev mode: `npm run electron:dev`
+- Production web build: `npm run build`
 
-## React Compiler
+## macOS desktop build (team/local)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+For local team use, unsigned DMGs are supported.
 
-## Expanding the ESLint configuration
+- Verify web bundle integrity: `npm run verify:dist`
+- Build unsigned mac app: `npm run dist:mac:unsigned`
+- Output DMG: `release/Prosperity Visualizer-0.0.0-arm64.dmg`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Diagnosing packaged startup issues
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Run the packaged app with Electron diagnostics enabled:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- `npm run diagnose:packaged`
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+This prints startup/load events, renderer load failures, GPU/child-process exits, and renderer console messages.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### If macOS says the app is corrupted/damaged
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Unsigned apps are frequently blocked by Gatekeeper and shown as \"damaged\" even when the bundle is valid.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Recommended sequence:
+
+1. Finder: right-click app -> `Open` -> confirm.
+2. If blocked, go to `System Settings -> Privacy & Security` and click `Open Anyway` for the app.
+3. If still blocked after copying/unzipping from another machine, remove quarantine metadata:
+   - `xattr -dr com.apple.quarantine \"release/mac-arm64/Prosperity Visualizer.app\"`
+4. Re-open the app.
+
+Notes:
+- Only run `xattr -dr` on trusted local artifacts.
+- This bypasses Gatekeeper checks; do not use for untrusted binaries.
+- For wide external distribution, use signed + notarized builds instead of unsigned DMGs.
+
+## GitHub Pages deployment
+
+This project is configured to deploy from the repository root workflow at:
+
+- `.github/workflows/prosperity-visualizer-pages.yml`
+
+### One-time setup in GitHub
+
+1. Go to `Settings -> Pages` in your repository.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+
+### How it deploys
+
+- Every push to `main` that changes `prosperity-visualizer/**` triggers deployment.
+- The workflow runs `npm ci` and `npm run build` inside `prosperity-visualizer`.
+- Vite uses the repository name automatically in CI so asset paths resolve correctly on Pages.
