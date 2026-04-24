@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { indicatorColor } from '../utils/indicatorColors';
 import { snapTimestampToTick } from '../utils/timestamp';
+import { isWebGLAvailable } from '../utils/webgl';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -221,6 +222,7 @@ export interface MainChartProps {
 function MainChartInner({ height, className, externalHover = false }: MainChartProps) {
   const [dragMode, setDragMode] = useState<'zoom' | 'pan'>('zoom');
   const isFullscreen = externalHover;
+  const chartTraceType: 'scattergl' | 'scatter' = isWebGLAvailable() ? 'scattergl' : 'scatter';
 
   const mode = useStore((s) => s.mode);
   const algoData = useStore((s) => s.algoData);
@@ -316,7 +318,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
     const hi = externalHover ? ('none' as const) : undefined;
     if (idxB.length > 0) {
       traces.push({
-        type: 'scattergl', mode: 'markers',
+        type: chartTraceType, mode: 'markers',
         x: idxB.map((i) => bids[i].timestamp),
         y: idxB.map((i) => bids[i].price),
         customdata: idxB.map((i) => bids[i].volume),
@@ -328,7 +330,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
     }
     if (idxA.length > 0) {
       traces.push({
-        type: 'scattergl', mode: 'markers',
+        type: chartTraceType, mode: 'markers',
         x: idxA.map((i) => asks[i].timestamp),
         y: idxA.map((i) => asks[i].price),
         customdata: idxA.map((i) => asks[i].volume),
@@ -339,7 +341,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
       });
     }
     return traces;
-  }, [obDisplayMode, obLevels, downsampleThresholds.ob, obMarkerSize, externalHover]);
+  }, [obDisplayMode, obLevels, downsampleThresholds.ob, obMarkerSize, externalHover, chartTraceType]);
 
   const timestepSpacing = useMemo(() => {
     if (obInView.length < 2) return 100;
@@ -407,7 +409,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
     }
 
     const hoverTrace: Data = {
-      type: 'scattergl', mode: 'markers',
+      type: chartTraceType, mode: 'markers',
       x: hx, y: hy,
       customdata: hcustom,
       marker: { size: 6, color: hcolors, opacity: 0 },
@@ -418,7 +420,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
     };
 
     return { shapes: shapes as Layout['shapes'], hoverTrace };
-  }, [obDisplayMode, obLevels, downsampleThresholds.ob, timestepSpacing, tradesInView, normName, indicators, selectedProduct, selectedDay, dayBounds, externalHover]);
+  }, [obDisplayMode, obLevels, downsampleThresholds.ob, timestepSpacing, tradesInView, normName, indicators, selectedProduct, selectedDay, dayBounds, externalHover, chartTraceType]);
 
   const tradeTrace = useMemo((): Data | null => {
     if (!selectedProduct || tradesInView.length === 0) return null;
@@ -482,7 +484,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
     }
 
     return {
-      type: 'scattergl', mode: 'markers',
+      type: chartTraceType, mode: 'markers',
       x: xs, y: ys,
       customdata,
       marker: { color: colors, symbol: symbols, size: sizes, line: { width: 0 } },
@@ -490,7 +492,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
       ...(externalHover ? { hoverinfo: 'none' as const } : {}),
       name: 'trades',
     };
-  }, [selectedProduct, tradesInView, normName, indicators, selectedDay, dayBounds, labelMap, labelToggles, downsampleThresholds.trades, externalHover, obMarkerSize]);
+  }, [selectedProduct, tradesInView, normName, indicators, selectedDay, dayBounds, labelMap, labelToggles, downsampleThresholds.trades, externalHover, obMarkerSize, chartTraceType]);
 
   const indicatorTraces = useMemo((): Data[] => {
     const list = indicators.filter((ind) => {
@@ -510,7 +512,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
         ys = sampled.map((p) => p.value - indicatorValueAt(normSeries, p.timestamp));
       }
       return {
-        type: 'scattergl', mode: 'lines',
+        type: chartTraceType, mode: 'lines',
         x: xs, y: ys,
         line: { width: 1.5, color: indicatorColor(ind.name) },
         hovertemplate: `${ind.name}: %{y:.2f}<extra></extra>`,
@@ -518,7 +520,7 @@ function MainChartInner({ height, className, externalHover = false }: MainChartP
         name: ind.name,
       } as Data;
     });
-  }, [indicators, selectedProduct, selectedDay, normName, externalHover, indicatorVisibility, downsampleThresholds.ds100]);
+  }, [indicators, selectedProduct, selectedDay, normName, externalHover, indicatorVisibility, downsampleThresholds.ds100, chartTraceType]);
 
   const data = useMemo(() => {
     const traces: Data[] = [];

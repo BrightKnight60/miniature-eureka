@@ -5,6 +5,7 @@ import { useStore } from '../store';
 import ChartPanel from './ChartPanel';
 import { extractProductPnlSeries } from '../parsers/productPnlSeries';
 import { snapTimestampToTick } from '../utils/timestamp';
+import { isWebGLAvailable } from '../utils/webgl';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -45,6 +46,7 @@ function valueAtOrBefore(points: { timestamp: number; value: number }[], ts: num
 }
 
 export default function PnLPanel() {
+  const traceType: 'scattergl' | 'scatter' = isWebGLAvailable() ? 'scattergl' : 'scatter';
   const mode = useStore((s) => s.mode);
   const algoData = useStore((s) => s.algoData);
   const selectedProduct = useStore((s) => s.selectedProduct);
@@ -62,7 +64,7 @@ export default function PnLPanel() {
 
     if (productSeries.length > 0) {
       traces.push({
-        type: 'scattergl',
+        type: traceType,
         mode: 'lines',
         name: selectedProduct || 'Product',
         x: productSeries.map((p) => p.timestamp),
@@ -74,7 +76,7 @@ export default function PnLPanel() {
 
     if (totalPnl.length > 0) {
       traces.push({
-        type: 'scattergl',
+        type: traceType,
         mode: 'lines',
         name: 'Total',
         x: totalPnl.map((p) => p.timestamp),
@@ -85,7 +87,7 @@ export default function PnLPanel() {
     }
 
     return traces;
-  }, [algoData?.orderBook, algoData?.pnl, selectedProduct]);
+  }, [algoData?.orderBook, algoData?.pnl, selectedProduct, traceType]);
 
   const headerValue = useMemo(() => {
     const orderBook = algoData?.orderBook ?? [];

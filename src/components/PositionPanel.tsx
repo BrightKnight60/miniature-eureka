@@ -4,6 +4,7 @@ import type { PlotHoverEvent, PlotRelayoutEvent } from 'plotly.js';
 import { useStore } from '../store';
 import ChartPanel from './ChartPanel';
 import { snapTimestampToTick } from '../utils/timestamp';
+import { isWebGLAvailable } from '../utils/webgl';
 
 const BG = '#FFFFFF';
 const GRID = '#F0F0F0';
@@ -42,6 +43,7 @@ function valueAtOrBefore(points: { timestamp: number; value: number }[], ts: num
 }
 
 export default function PositionPanel() {
+  const traceType: 'scattergl' | 'scatter' = isWebGLAvailable() ? 'scattergl' : 'scatter';
   const mode = useStore((s) => s.mode);
   const algoData = useStore((s) => s.algoData);
   const selectedProduct = useStore((s) => s.selectedProduct);
@@ -60,11 +62,11 @@ export default function PositionPanel() {
       y.push(pos !== undefined ? pos : 0);
     }
     return [{
-      type: 'scattergl' as const, mode: 'lines' as const, x, y,
+      type: traceType, mode: 'lines' as const, x, y,
       line: { color: '#FF9500', width: 1.5, shape: 'hv' as const },
       hovertemplate: '%{x}<br>Position: %{y}<extra></extra>',
     }];
-  }, [algoData?.logs, selectedProduct]);
+  }, [algoData?.logs, selectedProduct, traceType]);
 
   const headerValue = useMemo(() => {
     const logs = algoData?.logs ?? [];
