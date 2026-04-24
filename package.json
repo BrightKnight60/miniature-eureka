@@ -10,15 +10,27 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "electron:dev": "concurrently -k -n VITE,ELECTRON -c auto \"vite --host 127.0.0.1 --port 5173 --strictPort\" \"wait-on http://127.0.0.1:5173 && VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
-    "dist": "npm run build && electron-builder --mac"
+    "verify:dist": "node electron/verify-dist.cjs",
+    "dist": "npm run build && npm run verify:dist && electron-builder --mac",
+    "dist:mac": "npm run build && npm run verify:dist && electron-builder --mac dmg zip",
+    "dist:mac:unsigned": "npm run build && npm run verify:dist && electron-builder --mac dmg --config.mac.identity=null",
+    "diagnose:packaged": "node electron/run-packaged-diagnostic.cjs"
   },
   "build": {
     "appId": "com.prosperity.visualizer",
     "productName": "Prosperity Visualizer",
     "mac": {
-      "target": "dmg",
-      "identity": null
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.finance",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.plist"
     },
+    "afterSign": "electron/notarize.cjs",
     "files": [
       "dist/**/*",
       "electron/**/*"
