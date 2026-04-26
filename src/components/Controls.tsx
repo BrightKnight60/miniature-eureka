@@ -16,6 +16,13 @@ function readFileAsText(file: File): Promise<string> {
   });
 }
 
+function algoDays(data: { orderBook: { day: number }[] } | null): number[] {
+  if (!data) return [];
+  return [...new Set(data.orderBook.map((row) => row.day))]
+    .filter((day) => Number.isFinite(day))
+    .sort((a, b) => a - b);
+}
+
 const OB_KEYS = [
   ['bid1', 'Bid 1'],
   ['bid2', 'Bid 2'],
@@ -49,7 +56,9 @@ export function ControlsOptions() {
     : [];
 
   const dayOptions: (number | 'all')[] =
-    mode === 'algo' ? [0] : historicalData ? [...historicalData.days, 'all'] : ['all'];
+    mode === 'algo'
+      ? (algoDays(algoData).length > 0 ? algoDays(algoData) : [0])
+      : historicalData ? [...historicalData.days, 'all'] : ['all'];
 
   const normOptions = ['None', ...indicators.map((i) => i.name)];
 
@@ -179,9 +188,10 @@ export default function Controls() {
       e.target.value = '';
       let merged = parsed[0];
       for (let i = 1; i < parsed.length; i++) merged = mergeAlgoLogs(merged, parsed[i]);
+      const days = algoDays(merged);
       setAlgoData(merged);
       setMode('algo');
-      setSelectedDay(0);
+      setSelectedDay(days[0] ?? 0);
       setSelectedProduct(merged.products[0] ?? '');
       setXRange(null);
       addStatus(`✓ Algo data loaded: ${merged.products.join(', ')} | ${merged.orderBook.length} OB, ${merged.logs.length} logs, ${merged.pnl.length} PnL, ${merged.tradeHistory.length} trades`);

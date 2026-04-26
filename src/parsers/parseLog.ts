@@ -38,18 +38,28 @@ function parseTradesArray(raw: unknown): Trade[] {
 }
 
 function parseOrders(raw: unknown): { symbol: string; price: number; quantity: number }[] {
-  if (!Array.isArray(raw)) return [];
   const out: { symbol: string; price: number; quantity: number }[] = [];
-  for (const row of raw) {
-    if (!Array.isArray(row) || row.length < 3) continue;
+  const addRow = (row: unknown) => {
+    if (!Array.isArray(row) || row.length < 3) return;
     const price = Number(row[1]);
     const quantity = Number(row[2]);
-    if (!Number.isFinite(price) || !Number.isFinite(quantity)) continue;
+    if (!Number.isFinite(price) || !Number.isFinite(quantity)) return;
     out.push({
       symbol: String(row[0]),
       price,
       quantity,
     });
+  };
+  if (Array.isArray(raw)) {
+    for (const row of raw) addRow(row);
+  } else if (raw !== null && typeof raw === 'object') {
+    for (const value of Object.values(raw)) {
+      if (Array.isArray(value) && value.some((item) => Array.isArray(item))) {
+        for (const row of value) addRow(row);
+      } else {
+        addRow(value);
+      }
+    }
   }
   return out;
 }
@@ -64,12 +74,53 @@ function parsePositionRecord(raw: unknown): Record<string, number> {
   return out;
 }
 
+function parseDebugExplog(debugLog: string): Pick<LogEntry, 'orders' | 'position'> {
+  const orders: LogEntry['orders'] = [];
+  const position: Record<string, number> = {};
+
+  for (const line of debugLog.split(/\r?\n/)) {
+    if (!line.startsWith('EXPLOG ')) continue;
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 4) continue;
+    const product = parts[3];
+
+    const posIndex = parts.indexOf('position');
+    if (posIndex >= 0 && posIndex + 1 < parts.length) {
+      const pos = Number(parts[posIndex + 1]);
+      if (Number.isFinite(pos)) position[product] = pos;
+    }
+
+    const ordersMatch = line.match(/orders\s+\[(.*)\]/);
+    if (!ordersMatch) continue;
+    const tupleRe = /\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
+    let tupleMatch: RegExpExecArray | null;
+    while ((tupleMatch = tupleRe.exec(ordersMatch[1])) !== null) {
+      const price = Number(tupleMatch[1]);
+      const quantity = Number(tupleMatch[2]);
+      if (!Number.isFinite(price) || !Number.isFinite(quantity)) continue;
+      orders.push({ symbol: product, price, quantity });
+    }
+  }
+
+  return { orders, position };
+}
+
 function parseLambdaLog(timestamp: number, lambdaLogStr: string): LogEntry | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(lambdaLogStr);
   } catch {
-    return null;
+    const { orders, position } = parseDebugExplog(lambdaLogStr);
+    return {
+      timestamp,
+      orders,
+      conversions: 0,
+      traderData: '',
+      debugLogs: lambdaLogStr,
+      position,
+      ownTrades: [],
+      marketTrades: [],
+    };
   }
   if (!Array.isArray(parsed) || parsed.length < 5) return null;
 
@@ -187,7 +238,12 @@ export function parseAlgoLog(text: string): ParsedAlgoLog {
         const ts = Number(entry.timestamp);
         const lambdaLog = entry.lambdaLog;
         if (!Number.isFinite(ts) || typeof lambdaLog !== 'string') continue;
-        const le = parseLambdaLog(ts, lambdaLog);
+        const sandboxLog = entry.sandboxLog;
+        const combinedLog =
+          typeof sandboxLog === 'string' && sandboxLog.length > 0
+            ? `${sandboxLog}\n${lambdaLog}`
+            : lambdaLog;
+        const le = parseLambdaLog(ts, combinedLog);
         if (le) logs.push(le);
       }
     }
